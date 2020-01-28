@@ -1,0 +1,24 @@
+{
+  "name": "phiox/stream",
+  "description": "A stream library for PHP",
+  "license": "public domain",
+  "keywords": ["php", "stream", "streamwrapper", "vfs", "io"],
+  "homepage": "http://github.com/phiox/stream",
+  "authors": [
+    {
+      "name": "Christoffer Bubach",
+      "email": "christoffer@bubach.net"
+    }
+  ],
+  "require": {},
+  "require-dev": {
+    "phpunit/phpunit": "4.0.*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Phiox\\": "src/",
+      "Phiox\\Stream\\": "src/",
+      "Psr\\Http\\Message\\": "src/Psr/"
+    }
+  }
+}
