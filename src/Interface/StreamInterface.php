@@ -1,11 +1,10 @@
 <?php
 
-namespace Phiox;
+namespace Phiox\Stream;
 
 use SeekableIterator;
-use Phiox\Stream\WrapperInterface;
 
-interface StreamInterface extends SeekableIterator, WrapperInterface
+interface StreamInterface extends SeekableIterator
 {
 
     /**
@@ -27,9 +26,11 @@ interface StreamInterface extends SeekableIterator, WrapperInterface
     /**
      * StreamInterface
      *
-     * @param false|resource $stream
+     * @param  false|resource $stream
+     * @param  bool           $rewind
+     * @return false|int
      */
-    public function pipe($stream = STDOUT);
+    public function pipe($stream = STDOUT, $rewind = true);
 
     /**
      * StreamInterface
@@ -71,7 +72,21 @@ interface StreamInterface extends SeekableIterator, WrapperInterface
      *
      * @return bool
      */
-    public function isEnd();
+    public function isEof();
+
+    /**
+     * StreamInterface
+     *
+     * @return int
+     */
+    public function getOffset();
+
+    /**
+     * StreamInterface
+     *
+     * @return resource
+     */
+    public function getResource();
 
     /**
      * SeekableIterator & StreamInterface

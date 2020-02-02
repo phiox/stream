@@ -1,6 +1,6 @@
 <?php
 
-namespace Phiox\Stream;
+namespace Phiox\Stream\Decorator;
 
 use Phiox\Stream;
 use LimitIterator;
@@ -19,17 +19,16 @@ class LineStream extends Stream
      */
     public function seek($line)
     {
-        $this->rewind();
+        $this->stream->rewind();
+        $offset = $this->stream->getOffset();
 
-        while (!feof($this->resource) && $this->line < $line) {
-            $this->offset = $this->stream_tell();
-
-            fgets($this->resource);
-
+        while (!$this->stream->isEof() && $this->line < $line) {
+            $offset = $this->stream->getOffset();
+            fgets($this->stream->getResource());
             $this->line++;
         }
 
-        $this->stream_seek($this->offset);
+        $this->stream->seek($offset);
     }
 
     /**
@@ -47,13 +46,13 @@ class LineStream extends Stream
      */
     public function current()
     {
-        $start = $this->stream_tell();
-        fgets($this->resource);
+        $start = $this->stream->getOffset();
+        fgets($this->getResource());
+        $end = $this->stream->getOffset();
 
-        $end = $this->stream_tell();
-        $this->stream_seek($start);
+        $this->stream->seek($start);
 
-        return new LimitIterator($this, $start, ($end - $start));
+        return new LimitIterator($this->stream, $start, ($end - $start));
     }
 
     /**
@@ -69,7 +68,7 @@ class LineStream extends Stream
      */
     public function next()
     {
-        fgets($this->resource);
+        fgets($this->stream->getResource());
 
         ++$this->line;
     }
@@ -79,6 +78,6 @@ class LineStream extends Stream
      */
     public function valid()
     {
-        return !$this->isEnd();
+        return !$this->stream->isEof();
     }
 }

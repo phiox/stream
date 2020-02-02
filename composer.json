@@ -17,8 +17,13 @@
   "autoload": {
     "psr-4": {
       "Phiox\\": "src/",
-      "Phiox\\Stream\\": "src/",
-      "Psr\\Http\\Message\\": "src/Psr/"
+      "Phiox\\Stream\\": ["src/", "src/Interface/"],
+      "Psr\\Http\\Message\\": "src/Interfaces/Psr/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Phiox\\Tests\\": "tests/"
     }
   }
 }

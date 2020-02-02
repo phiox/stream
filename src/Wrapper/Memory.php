@@ -4,9 +4,8 @@ namespace Phiox\Stream\Wrapper;
 
 use Phiox\Stream\StreamInterface;
 
-class File extends AbstractWrapper implements StreamInterface
+class Memory extends AbstractWrapper implements StreamInterface
 {
-
     /**
      * @var resource Stream resource-handle
      */
@@ -20,19 +19,26 @@ class File extends AbstractWrapper implements StreamInterface
     /**
      * @var string Wrapper protocol
      */
-    protected $protocol = 'file';
+    protected $protocol = 'php';
 
     /**
-     * Create new stream from file-resource
+     * Create new stream from (optional) string
      *
-     * @param string $path
-     * @param string $mode
+     * @param  mixed          $data Stream data
+     * @return false|resource       Stream handle
      */
-    public  function __construct($path, $mode = 'wb')
+    public function __construct($data = null)
     {
-        $this->register($this->protocol);
+        $this->register('php');
 
-        $this->resource = $this->callInner('fopen', [$path, $mode]);
+        $stream = fopen('php://temp', 'wb');
+
+        if (!empty($data)) {
+            fwrite($stream, $data);
+            fseek($stream, 0);
+        }
+
+        return $stream;
     }
 
     /**
@@ -131,8 +137,8 @@ class File extends AbstractWrapper implements StreamInterface
     /**
      * Copy stream contents to target in chunks. Default stream buffer-size is 8kb.
      *
-     * @param  StreamInterface|resource $stream
-     * @param  bool                     $rewind
+     * @param  null|resource $stream
+     * @param  bool          $rewind
      * @return false|int
      */
     public function pipe($stream = null, $rewind = true)

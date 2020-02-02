@@ -3,9 +3,16 @@
 namespace Phiox;
 
 use Phiox\Stream\Wrapper\File;
+use Phiox\Stream\Wrapper\Memory;
+use Phiox\Stream\StreamInterface;
 
-class Stream extends File implements StreamInterface
+class Stream implements StreamInterface
 {
+
+    /**
+     * @var StreamInterface $stream Decorated base-instance
+     */
+    protected $stream;
 
     /**
      * @var int Current stream position
@@ -13,60 +20,44 @@ class Stream extends File implements StreamInterface
     protected $offset = 0;
 
     /**
-     * Closes the stream.
+     * Stream constructor.
      *
-     * @return void
+     * @param StreamInterface|null $stream
      */
-    public function close()
+    public function __construct(StreamInterface $stream)
     {
-        $this->stream_close();
+        $this->stream = $stream;
     }
 
     /**
-     * Extend wrapper seek to ensure valid value in $this->offset
+     * New instance from opened file
      *
-     * @param  int       $offset
-     * @param  int       $whence
-     * @return bool|void
+     * @param  string $filename
+     * @param  string $mode
+     * @return Stream
      */
-    public function stream_seek($offset, $whence = SEEK_SET)
+    public static function fromFile($filename, $mode = 'wb')
     {
-        $ret = parent::stream_seek($offset, $whence);
-
-        $this->offset = $this->stream_tell();
-
-        return $ret;
+        return new self(new File($filename, $mode));
     }
 
     /**
-     * Extend wrapper read to ensure valid value in $this->offset
+     * New instance from string data
      *
-     * @param  int         $count
-     * @return string|void
+     * @param  string $data
+     * @return Stream
      */
-    public function stream_read($count)
+    public static function fromString($data)
     {
-        $value = parent::stream_read($count);
-
-        $this->offset = $this->stream_tell();
-
-        return $value;
+        return new self(new Memory($data));
     }
 
-
     /**
-     * Extend wrapper read to ensure valid value in $this->offset
-     *
-     * @param  string     $data
-     * @return int|string
+     * @return resource|void
      */
-    public function stream_write($data)
+    public function getResource()
     {
-        $ret = parent::stream_write($data);
-
-        $this->offset = $this->stream_tell();
-
-        return $ret;
+        return $this->stream->getResource();
     }
 
     /**
@@ -74,9 +65,7 @@ class Stream extends File implements StreamInterface
      */
     public function isSeekable()
     {
-        $meta = stream_get_meta_data($this->resource);
-
-        return $meta['seekable'];
+        return $this->stream->isSeekable();
     }
 
     /**
@@ -84,14 +73,7 @@ class Stream extends File implements StreamInterface
      */
     public function isReadable()
     {
-        $meta = stream_get_meta_data($this->resource);
-
-        $readable = [
-            'r', 'w+', 'r+', 'x+', 'c+', 'rb', 'w+b', 'r+b',
-            'x+b', 'c+b', 'rt', 'w+t', 'r+t', 'x+t', 'c+t', 'a+',
-        ];
-
-        return in_array($meta['mode'], $readable, true);
+        return $this->stream->isReadable();
     }
 
     /**
@@ -99,30 +81,17 @@ class Stream extends File implements StreamInterface
      */
     public function isWritable()
     {
-        $meta = stream_get_meta_data($this->resource);
-
-        $writable = [
-            'w', 'w+', 'rw', 'r+', 'x+', 'c+', 'wb', 'w+b', 'r+b',
-            'x+b', 'c+b', 'w+t', 'r+t', 'x+t', 'c+t', 'a', 'a+',
-        ];
-
-        return in_array($meta['mode'], $writable, true);
+        return $this->stream->isWritable();
     }
 
     /**
-     * Go to offset in stream.
+     * Seek to specified offset.
      *
      * @param int $offset
      */
     public function seek($offset)
     {
-        if ($offset < 0) {
-            parent::stream_seek($offset, SEEK_END);
-        } else {
-            parent::stream_seek($offset);
-        }
-
-        $this->offset = $this->stream_tell();
+        $this->stream->seek($offset);
     }
 
     /**
@@ -130,9 +99,9 @@ class Stream extends File implements StreamInterface
      *
      * @return bool
      */
-    public function isEnd()
+    public function isEof()
     {
-        return $this->stream_eof();
+        return $this->stream->isEof();
     }
 
     /**
@@ -142,9 +111,15 @@ class Stream extends File implements StreamInterface
      */
     public function getSize()
     {
-        $stat = $this->stream_stat();
+        return $this->stream->getSize();
+    }
 
-        return $stat['size'];
+    /**
+     * @return int
+     */
+    public function getOffset()
+    {
+        return $this->stream->getOffset();
     }
 
     /**
@@ -155,15 +130,7 @@ class Stream extends File implements StreamInterface
      */
     public function read($size = 1)
     {
-        $data = parent::stream_read($size);
-
-        if ($data !== false) {
-            $this->offset += $size;
-        } else {
-            $this->offset = $this->stream_tell();
-        }
-
-        return $data;
+        return $this->stream->read($size);
     }
 
     /**
@@ -173,15 +140,11 @@ class Stream extends File implements StreamInterface
      */
     public function write($data)
     {
-        if (parent::stream_write($data)) {
-            $this->offset += strlen($data);
-        } else {
-            $this->offset = $this->stream_tell();
-        }
+        $this->stream->write($data);
     }
 
     /**
-     * Flush stream contents to target
+     * Copy stream contents to target in chunks. Default stream buffer-size is 8kb.
      *
      * @param  null|resource $stream
      * @param  bool           $rewind
@@ -189,11 +152,7 @@ class Stream extends File implements StreamInterface
      */
     public function pipe($stream = null, $rewind = true)
     {
-        if (!is_resource($stream)) {
-            $stream = STDOUT;
-        }
-
-        return stream_copy_to_stream($stream, $this->resource, null, ($rewind ? 0 : null));
+        return $this->stream->pipe($stream, $rewind);
     }
 
     /**
@@ -201,9 +160,7 @@ class Stream extends File implements StreamInterface
      */
     public function rewind()
     {
-        $this->offset = 0;
-
-        $this->stream_seek($this->offset);
+         $this->stream->rewind();
     }
 
     /**
@@ -211,9 +168,7 @@ class Stream extends File implements StreamInterface
      */
     public function current()
     {
-        $this->stream_seek($this->offset);
-
-        return $this->stream_read(1);
+        return $this->stream->current();
     }
 
     /**
@@ -229,9 +184,7 @@ class Stream extends File implements StreamInterface
      */
     public function next()
     {
-        ++$this->offset;
-
-        $this->stream_seek($this->offset);
+        $this->stream->next();
     }
 
     /**
@@ -239,14 +192,16 @@ class Stream extends File implements StreamInterface
      */
     public function valid()
     {
-        return $this->stream_eof();
+        return $this->stream->valid();
     }
 
     /**
-     * Destructor, closes stream automatically.
+     * Closes the stream.
+     *
+     * @return void
      */
-    public function __destruct()
+    public function close()
     {
-        $this->close();
+        $this->stream->close();
     }
 }
